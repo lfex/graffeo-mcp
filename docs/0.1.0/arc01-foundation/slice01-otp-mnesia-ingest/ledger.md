@@ -45,8 +45,26 @@
   `graffeo_mnesia:delete` runs even when an assertion fails, preventing
   table leaks between test runs.
 
+## CDC Remediation (commit 54094f0)
+
+CDC verified the slice at 7e693bd and flagged three test gaps and one
+documentation gap as quality-floor items to address before Slice 02:
+
+- **R-1 done:** `parse-file-nonexistent-returns-error` test — covers the
+  `{error, {read-failed, _, _}}` branch in `parse-file/1`.
+- **R-2 done:** `edge-merge-multi-source` test — fixture extended so source-2's
+  concept-a declares `related: [concept-b]`; verifies weight minimisation
+  (1.0), type union (`[prerequisites, related]`), and multi-source attribution.
+- **R-3 done:** `build-from-dir-populates-graph` test — uses
+  `test/fixtures/cards/test-source/` with 2 minimal card files; asserts 4
+  vertices and 2 edges.
+- **R-4 done:** edge merge strategy documented in `docs/architecture.md` §5.5.
+
+Total tests after remediation: 16. Zero compile warnings.
+
 ## Closure
 
-Closed at commit 7e693bd on 2026-06-12. Total rows: 19. Done: 17. Deferred: 2 (F-17, F-18 — blocked on card corpus). No-op: 0.
+Closed at commit 7e693bd on 2026-06-12. CDC remediation at commit 54094f0.
+Total rows: 19. Done: 17. Deferred: 2 (F-17, F-18 — blocked on card corpus). No-op: 0.
 
 F-17 and F-18 re-enter at arc02 or whenever `make fetch-cards` is run.
