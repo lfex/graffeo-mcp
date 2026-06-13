@@ -49,3 +49,9 @@
   (case (graffeo-mcp-parser:parse-string (missing-field))
     ((tuple 'error (tuple 'missing-field _)) (is 'true))
     (other (is-equal (tuple 'error (tuple 'missing-field '_)) other))))
+
+(deftest parse-file-nonexistent-returns-error
+  "parse-file returns {error, {read-failed, _, _}} for a path that does not exist."
+  (case (graffeo-mcp-parser:parse-file "test/fixtures/no-such-file.md")
+    ((tuple 'error (tuple 'read-failed _ _)) (is 'true))
+    (other (is-equal (tuple 'error (tuple 'read-failed '_ '_)) other))))

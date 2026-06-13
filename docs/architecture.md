@@ -341,6 +341,18 @@ For shortest-path queries to be meaningful, edges need weights:
 | contrasts_with | 3.0 | Weakest typed connection |
 | membership | 0.5 | Source↔abstract is a projection, not a conceptual step |
 
+**Edge merge strategy.** The same abstract-to-abstract edge can be asserted by
+multiple source cards (different books covering the same concept pair) or by
+multiple relationship types from the same card. When `add-typed-edge` encounters
+an existing edge, it merges rather than overwrites: `weight` takes
+`erlang:min(new, old)` so the strongest relationship (lowest weight) dominates
+path-finding; `types` is the `lists:usort` union of all asserted relationship
+types; `asserted_by` is the `lists:usort` union of all asserting source slugs.
+Rationale: in a learning-path graph, a prerequisite relationship should always
+beat a weaker "related" assertion when computing shortest paths, while the full
+type union and attribution list remain available for tool consumers that want
+the complete semantic picture.
+
 ---
 
 ## 6. Implementation Phases

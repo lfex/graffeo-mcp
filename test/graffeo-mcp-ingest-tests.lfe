@@ -4,10 +4,14 @@
 ;;;;   concept-a  (source-1)  prereqs: [concept-b], related: [concept-c]
 ;;;;   concept-b  (source-1)  no relationships
 ;;;;   concept-c  (source-1)  no relationships
-;;;;   concept-a  (source-2)  no relationships   ← same slug, different source
+;;;;   concept-a  (source-2)  related: [concept-b]  ← same slug; forces merge on a→b edge
+;;;;
+;;;; concept-a→concept-b is asserted by source-1 as prerequisites (weight 1.0)
+;;;; AND by source-2 as related (weight 2.0).  After merge: weight=1.0 (min),
+;;;; types=[prerequisites,related], asserted_by=[source-1,source-2].
 ;;;;
 ;;;; Expected counts after full build:
-;;;;   vertices: 4 source + 3 abstract = 7
+;;;;   vertices: 4 source + 3 abstract = 7  (source-2 related target is already abstract)
 ;;;;   edges:    4 membership + 2 source-internal + 2 abstract = 8
 
 (defmodule graffeo-mcp-ingest-tests
@@ -37,7 +41,7 @@
               (list #"concept-b") (list #"concept-c"))
    (make-card #"concept-b" #"Concept B" #"source-1" '() '())
    (make-card #"concept-c" #"Concept C" #"source-1" '() '())
-   (make-card #"concept-a" #"Concept A" #"source-2" '() '())))
+   (make-card #"concept-a" #"Concept A" #"source-2" '() (list #"concept-b"))))
 
 ;;; ========================================
 ;;; Tests
@@ -124,4 +128,35 @@
            (let ((label (mref meta 'label)))
              (is (lists:member 'prerequisites (mref label 'types)))))
           (other (is-equal (tuple 'ok 'meta) other))))
+      (after (graffeo_mnesia:delete graph)))))
+
+(deftest edge-merge-multi-source
+  "When two sources assert the same abstract edge with different types, add-typed-edge
+  merges: weight = min, types = union, asserted_by = both sources listed."
+  (let ((graph (graffeo_mnesia:new)))
+    (try
+      (progn
+        (graffeo-mcp-ingest:build (test-cards) graph)
+        ;; source-1 asserts concept-a→concept-b as prerequisites (weight 1.0)
+        ;; source-2 asserts concept-a→concept-b as related (weight 2.0)
+        (case (graffeo:edge_meta graph #"concept-a" #"concept-b")
+          ((tuple 'ok meta)
+           (let ((label (mref meta 'label)))
+             (is-equal 1.0 (mref meta 'weight))
+             (is (lists:member 'prerequisites (mref label 'types)))
+             (is (lists:member 'related (mref label 'types)))
+             (is (lists:member #"source-1" (mref label 'asserted_by)))
+             (is (lists:member #"source-2" (mref label 'asserted_by)))))
+          (other (is-equal (tuple 'ok 'meta) other))))
+      (after (graffeo_mnesia:delete graph)))))
+
+(deftest build-from-dir-populates-graph
+  "build-from-dir/2 parses .md files from a directory tree and builds the graph."
+  (let ((graph (graffeo_mnesia:new)))
+    (try
+      (progn
+        (graffeo-mcp-ingest:build-from-dir "test/fixtures/cards" graph)
+        ;; 2 cards → 2 source + 2 abstract = 4 vertices, 2 membership edges
+        (is-equal 4 (graffeo:no_vertices graph))
+        (is-equal 2 (graffeo:no_edges graph)))
       (after (graffeo_mnesia:delete graph)))))
