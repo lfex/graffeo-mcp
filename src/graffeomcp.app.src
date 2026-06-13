@@ -1,0 +1,9 @@
+{application, graffeomcp, [
+    {description, "graffeo MCP server — Erlang knowledge graph over erlmcp"},
+    {vsn, "0.1.0"},
+    {modules, []},
+    {registered, ['graffeo-mcp-sup', 'graffeo-mcp-graph']},
+    {applications, [kernel, stdlib, mnesia, graffeo, erlmcp]},
+    {mod, {'graffeo-mcp-app', []}},
+    {env, []}
+]}.
