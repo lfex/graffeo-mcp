@@ -80,3 +80,55 @@
         (is-not-equal 'nomatch (binary:match text #"membership"))
         (is-not-equal 'nomatch (binary:match text #"prerequisites")))
       (after (graffeo_mnesia:delete graph)))))
+
+;;; ========================================
+;;; Navigation + learning formatting (data-only, no graph)
+;;; ========================================
+
+(deftest format-node-renders-fields
+  "format-node/1 renders concept name, slug, category, tier, and degrees."
+  (let* ((data (map 'id #"gen-server"
+                    'label (map 'concept #"Generic Server"
+                                'category #"otp" 'tier #"intermediate")
+                    'in_degree 3 'out_degree 2 'sources 4))
+         (text (graffeo-mcp-format:format-node data)))
+    (is (is_binary text))
+    (is-not-equal 'nomatch (binary:match text #"Generic Server"))
+    (is-not-equal 'nomatch (binary:match text #"gen-server"))
+    (is-not-equal 'nomatch (binary:match text #"otp"))
+    (is-not-equal 'nomatch (binary:match text #"intermediate"))))
+
+(deftest format-node-edges-groups-by-direction
+  "format-node-edges/1 groups outgoing and incoming edges with type and weight."
+  (let* ((edges (list (map 'dir 'out 'other #"concept-c"
+                           'type 'related 'weight 2.0)
+                      (map 'dir 'in 'other #"concept-b"
+                           'type 'prerequisites 'weight 1.0)))
+         (text (graffeo-mcp-format:format-node-edges
+                (tuple #"concept-a" edges))))
+    (is (is_binary text))
+    (is-not-equal 'nomatch (binary:match text #"Outgoing"))
+    (is-not-equal 'nomatch (binary:match text #"Incoming"))
+    (is-not-equal 'nomatch (binary:match text #"related"))
+    (is-not-equal 'nomatch (binary:match text #"concept-b"))))
+
+(deftest format-prerequisites-renders-counts
+  "format-prerequisites/1 renders direct and transitive sets with counts."
+  (let ((text (graffeo-mcp-format:format-prerequisites
+               (tuple #"concept-d"
+                      (list #"concept-b")
+                      (list #"concept-a" #"concept-b")))))
+    (is (is_binary text))
+    (is-not-equal 'nomatch (binary:match text #"Direct"))
+    (is-not-equal 'nomatch (binary:match text #"Transitive"))
+    (is-not-equal 'nomatch (binary:match text #"concept-a"))))
+
+(deftest format-learning-path-numbers-steps
+  "format-learning-path/1 renders a numbered, foundations-first sequence."
+  (let ((text (graffeo-mcp-format:format-learning-path
+               (tuple #"concept-d"
+                      (list #"concept-a" #"concept-b" #"concept-d")))))
+    (is (is_binary text))
+    (is-not-equal 'nomatch (binary:match text #"Learning path"))
+    (is-not-equal 'nomatch (binary:match text #"1. concept-a"))
+    (is-not-equal 'nomatch (binary:match text #"3. concept-d"))))

@@ -36,6 +36,24 @@
   abstract-to-abstract edges turned out simpler than the projection approach,
   and produces the same graph topology.
 
+  **Architectural boundary (traced in Arc 2, Slice 01).** This is not a Mnesia
+  quirk to dodge — it is a deliberate design line in graffeo. Every backend
+  implements two behaviours: the *read-half* (`graffeo_backend`: `vertices`,
+  `in/out_neighbours`, `in/out_degree`, `edge_meta`, `vertex_label`, …) is
+  **universal**; the *build-half* (`graffeo_builder`: `empty_like`,
+  `build_add_vertex`, `build_add_edge`) is **memory-only in practice**. Every
+  constructive op — `filter_edges`, `subgraph`, `condensation`, `contract` —
+  starts with `Backend:empty_like(G)`. The map and ets backends return a fresh
+  empty graph; the **disk** backends (`graffeo_mnesia` *and* `graffeo_dets`)
+  both deliberately raise `{unsupported_on_backend, empty_like, Module}`,
+  because materializing a derived graph on a disk backend would silently create
+  new persistent tables/files on every call — a footgun for read-only-looking
+  queries. **Consequence for graffeo-mcp:** the Mnesia graph is the durable
+  authoritative store (read-half + in-place mutation); any algorithm that needs
+  a *derived* graph must project the relevant edges into an in-memory map graph
+  (`graffeo:new/0` is map-backed, GC'd, no cleanup) and run the algorithm there.
+  See the Arc 2 Slice 01 ledger amendment for the query-layer application.
+
 - **ltest as test-profile dep** — `(behaviour ltest-unit)` + `deftest` macros
   gave idiomatic LFE tests with no awkward underscore hacks. Adding
   `eunit_tests` to rebar.config's test profile made `rebar3 eunit` (no flags)
